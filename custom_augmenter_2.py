@@ -1,6 +1,5 @@
-from PIL import Image
-import cv2 as cv
-from random import random
+from PIL import Image, ImageOps
+
 from custom_translation import making_pixels_pink, making_pixels_pink_2, translate, check_all_edge_pixel_black_y_axis, \
     check_all_edge_pixel_black_x_axis
 from custom_rotate import rotation_making_black_pixels_pink, turn_pink_2, turn_black
@@ -19,41 +18,41 @@ print(type(imageimage))
 '''
 
 
-def augmentation(image_name, image, img_nc, pink, pink_nc, pix_pink, pix_pink_nc, mask, mask_nc, black, black_nc, pix_black, pix_black_nc, width, height):
-    for i in range(2):
-        #print(image_name)
+def augmentation(image_name, image, img_nc, pink, pink_nc, pix_pink, pix_pink_nc, mask, mask_nc, black, black_nc,
+                 pix_black, pix_black_nc, width, height, label):
+    '''In this method, all the augmentation methods for zoom, rotation and translation are called'''
+
+    # This number decides, how many augmentations images should be generated for the current image
+    number_of_augmentations = 2
+
+    # Creating an augmented image with every loop
+    for i in range(number_of_augmentations):
+        # Description of first image should be 1 and not 0
         i = i + 1
 
-        # (i)
+        # random() creates number between 0 and 1. zoom_random_nr is for deciding if it should be zoomed in or out
         zoom_random_nr = random()
-        if image_name.startswith('hand') or image_name.startswith('zz_test_hand'):
-            zoom_random_nr = 0.1
-
-        # print(zoom_random_nr)
+        # if zoom_random_nr is smaller than 0.5, we zoom in
         if zoom_random_nr < 0.5:
-            zoom_in(image_name, image, img_nc, mask, mask_nc, width, height, i)
-
+            zoom_in(image_name, image, img_nc, mask, mask_nc, width, height, i, label)
+        # else zoom out
         else:
-            zoom_out(image_name, image, img_nc, mask, mask_nc, black, black_nc, width, height, pink, pink_nc, i)
-            #print('zoomout')
+            zoom_out(image_name, image, img_nc, mask, mask_nc, black, black_nc, width, height, pink, pink_nc, i, label)
+
 
         directory_zoom_img = 'zoom_folder/images/' + image_name[:-4] + '_' + str(i) + '.png'
-        directory_zoom_mask = 'zoom_folder/masks/' + image_name[:-4] + '_mask_' + str(i) + '.png'
+        directory_zoom_mask = 'zoom_folder/masks/' + image_name[:-4] + '_' + str(i) + '.png'
         directory_zoom_img_not_cleaned = 'zoom_folder/no_cleaned_images/' + image_name[:-4] + '_' + str(i) + '.png'
-        directory_zoom_mask_not_cleaned = 'zoom_folder/no_cleaned_masks/' + image_name[:-4] + '_mask_' + str(i) + '.png'
+        directory_zoom_mask_not_cleaned = 'zoom_folder/no_cleaned_masks/' + image_name[:-4] + '_' + str(i) + '.png'
         img_zoom = Image.open(directory_zoom_img)
         img_zoom_nc = Image.open(directory_zoom_img_not_cleaned)
         mask_zoom = Image.open(directory_zoom_mask)
+        mask_zoom = ImageOps.grayscale(mask_zoom)
         mask_zoom_nc = Image.open(directory_zoom_mask_not_cleaned)
+        mask_zoom_nc = ImageOps.grayscale(mask_zoom_nc)
         pix_zoom_nc = mask_zoom_nc.load()
 
 
-        #for x in range(width):
-        #    for y in range(height):
-        #        if pix_zoom[x,y] != 0 and pix_zoom[x,y] != 253:
-        #            print(pix_zoom[x, y])
-
-    
 
         random_rotate_nr = int(random() * 365)
         if image_name.startswith('hand') or image_name.startswith('zz_test_hand'):
@@ -172,14 +171,14 @@ def augmentation(image_name, image, img_nc, pink, pink_nc, pix_pink, pix_pink_nc
                                   pix_black_nc,
                                   x_trans_positiv, y_trans_positiv)
 
-        save_name_img = 'D:/trained_models/Training_Data_With_Augmentation_3/images/' + 'zz_' +  image_name[:-4] + '_' +  str(i) + '.png'
+        save_name_img = 'augmented_images/' + image_name[:-4] + '_' +  str(i) + '.png'
         pink.save(save_name_img)
-        save_name_mask = 'D:/trained_models/Training_Data_With_Augmentation_3/masks/' + 'zz_' + image_name[:-4] + '_mask_' +  str(i) + '.png'
+        save_name_mask = 'augmented_masks/' + image_name[:-4] + '_' +  str(i) + '.png'
         black.save(save_name_mask)
 
-        save_name_img_nc = 'D:/trained_models/Training_Data_With_Augmentation_3/images_no_clean/' + 'zz_' + image_name[:-4] + '_' +  str(i) + '.png'
+        save_name_img_nc = 'augmented_images_no_clean/' + image_name[:-4] + '_' +  str(i) + '.png'
         pink_nc.save(save_name_img_nc)
-        save_name_mask_nc = 'D:/trained_models/Training_Data_With_Augmentation_3/masks_no_clean/' + 'zz_' + image_name[:-4] + '_mask_' +  str(i) + '.png'
+        save_name_mask_nc = 'augmented_masks_no_clean/' + image_name[:-4] + '_' +  str(i) + '.png'
         black_nc.save(save_name_mask_nc)
         for x in range(0,width):
             for y in range(0,height):

@@ -70,8 +70,8 @@ def zoom_in(image_name, img, mask, width, height, counter):
 
 
     # Shows the image in image viewer
-    save_name_image = 'zoom_folder/images/' + image_name[:-4] +'_' + str(counter) + '.png'
-    save_name_mask = 'zoom_folder/masks/' + image_name[:-4] + '_mask_' +  str(counter) + '.png'
+    save_name_image = 'zoom_folder/images/' + image_name[:-4] + '_' + str(counter) + '.png'
+    save_name_mask = 'zoom_folder/masks/' + image_name[:-4] + '_' +  str(counter) + '.png'
     img.save(save_name_image)
     mask.save(save_name_mask)
     return counter
@@ -101,9 +101,9 @@ def zoom_out(image_name, img, mask, black, width, height, pink, counter):
     pink.resize((width,height))
     black.resize((width,height))
     save_name_image = 'zoom_folder/images/' + image_name[:-4] +'_' + str(counter) + '.png'
-    save_name_mask = 'zoom_folder/masks/' + image_name[:-4] + '_mask_' +  str(counter) + '.png'
-    img.save(save_name_image)
-    mask.save(save_name_mask)
+    save_name_mask = 'zoom_folder/masks/' + image_name[:-4]  +  '_' + str(counter) + '.png'
+    pink.save(save_name_image)
+    black.save(save_name_mask)
     return counter
 
 

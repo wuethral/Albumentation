@@ -2,8 +2,8 @@ import os
 from PIL import Image, ImageOps
 from custom_augmenter import augmentation
 
-directory_images = 'D:/trained_models/No_Cleaned_Training_Data_No_Augmentation/images'
-directory_masks = 'D:/trained_models/No_Cleaned_Training_Data_No_Augmentation/masks'
+directory_images = 'images_pink_background'
+directory_masks = 'masks'
 images = os.listdir(directory_images)
 masks = os.listdir(directory_masks)
 directory_image0 = directory_images + '/' + images[0]
@@ -16,6 +16,9 @@ black = Image.open(directory_black)
 black = ImageOps.grayscale(black)
 pix_pink = pink.load()
 pix_black = black.load()
+
+
+
 ''' 
 for x in range(width):
     for y in range(height):
@@ -38,13 +41,18 @@ for i in range(len(images)):
     #pix_original = Image.open(image_directory).load()
     image = Image.open(image_directory)
     mask = Image.open(mask_directory)
-    if image_name.startswith('hand') or image_name.startswith('zz_test_hand'):
-        mask = ImageOps.grayscale(mask)
+    mask = mask.resize((width, height))
+    #if image_name.startswith('hand') or image_name.startswith('zz_test_hand'):
+    mask = ImageOps.grayscale(mask)
+    print(pink.size)
+    print(black.size)
+    print(image.size)
+    print(mask.size)
+    for x in range(width):
+        for y in range(height):
+            if mask.load()[x, y] != 0 and mask.load()[x, y] != 248 and mask.load()[x,y] != 249: #and mask.load()[x,y] != 250:
+                mask.load()[x, y] = 0
+
 
     augmentation(image_name, image, pink, pix_pink, mask, black, pix_black, width, height)
-''' 
-for x in range(width):
-    for y in range(height):
-        if mask.load()[x, y] != 0 and mask.load()[x, y] != 253:
-            print(mask.load()[x, y])
-'''
+
