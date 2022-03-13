@@ -1,158 +1,82 @@
-from PIL import Image
-import time
-import torch
-import torchvision
-from torch.utils.data import Dataset
-from torchvision import transforms
-import albumentations
-import albumentations.pytorch
-from matplotlib import pyplot as plt
-import cv2
-import numpy as np
+import os
+from PIL import Image, ImageOps
+from custom_augmenter import augmentation
 
+# The boolean double_augmenter determines, whether only the images and masks in initial_dataset/images_1 (set it to
+# False)and initial_dataset/masks_1 are augmented or all images and masks in the folder initial_dataset (set it to True)
+# If all are augmented, the images_1/masks_1 and images_2/masks_2 are augmented with the same parameters.
+double_augmenter = True
 
-class TorchvisionDataset(Dataset):
-    def __init__(self, file_paths, labels, transform=None):
-        self.file_paths = file_paths
-        self.labels = labels
-        self.transform = transform
+# The label or pixel value of the masks. Depending on the label one wants, this has to be set accordingly.
+label = 250
 
-    def __len__(self):
-        return len(self.file_paths)
+# Opening images and masks from directory initial_dataset/images_1 and initial_dataset/masks_1
+directory_images = 'initial_dataset/images_1'
+directory_masks = 'initial_dataset/masks_1'
+images = os.listdir(directory_images)
+masks = os.listdir(directory_masks)
 
-    def __getitem__(self, idx):
-        label = self.labels[idx]
-        file_path = self.file_paths[idx]
+# If double_augmenter is True, open the images and masks from directory initial_dataset/images_2 and
+# initial_dataset/masks_2
+if double_augmenter:
+    directory_images_not_cleaned = 'initial_dataset/images_2'
+    directory_masks_not_cleaned = 'initial_dataset/masks_2'
+    images_not_cleaned = os.listdir(directory_images_not_cleaned)
+    masks_not_cleaned = os.listdir(directory_masks_not_cleaned)
 
-        # Read an image with PIL
-        image = Image.open(file_path)
+# Getting the image's and mask's width and height
+directory_image0 = directory_images + '/' + images[0]
+image0 = Image.open(directory_image0)
+width, height = image0.size
 
-        start_t = time.time()
-        if self.transform:
-            image = self.transform(image)
-        total_time = (time.time() - start_t)
+# Directory to the pink and black image
+directory_pink = 'background.png'
+directory_black = 'black.png'
 
-        return image, label, total_time
+# Looping through the images
+for i in range(len(images)):
+    # Loading the black and pink images, turning black image to grayscale and getting access to pixel values of black
+    # and pink image
+    pink = Image.open(directory_pink)
+    black = Image.open(directory_black)
+    black = ImageOps.grayscale(black)
+    pix_pink = pink.load()
+    pix_black = black.load()
 
-torchvision_transform = transforms.Compose([
-    transforms.Resize((256, 256)),
-    transforms.RandomCrop(224),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-])
+    # Accessing image and mask name of at current position
+    image_name = images[i]
+    mask_name = masks[i]
+    image_directory = directory_images + '/' + image_name
+    mask_directory = directory_masks + '/' + mask_name
 
-torchvision_dataset = TorchvisionDataset(
-    file_paths=["D:/Different_backgrounds/Black/screw_random_dataset_6_2.png"],
-    labels=[1],
-    transform=torchvision_transform,
-)
+    # Opening image and mask, resizing mask to the size of the image, and turn mask to grayscale
+    image = Image.open(image_directory)
+    mask = Image.open(mask_directory)
+    mask = mask.resize((width, height))
+    mask = ImageOps.grayscale(mask)
 
-total_time = 0
-for i in range(100):
-  sample, _, transform_time = torchvision_dataset[0]
-  total_time += transform_time
+    if double_augmenter:
+        # Create copy of pink and black image, and get access to their pixel values
+        pink_nc = pink.copy()
+        black_nc = black.copy()
+        black_nc = ImageOps.grayscale(black_nc)
+        pix_pink_nc = pink_nc.load()
+        pix_black_nc = black_nc.load()
 
-print("torchvision time/sample: {} ms".format(total_time*10))
+        # Opening images and masks from folder initial_dataset/images_2 and initial_dataset/masks_2
+        image_not_cleaned_name = images_not_cleaned[i]
+        mask_not_cleaned_name = masks_not_cleaned[i]
+        image_nc_dir = directory_images_not_cleaned + '/' + image_not_cleaned_name
+        mask_nc_dir = directory_masks_not_cleaned + '/' + mask_not_cleaned_name
+        img_nc = Image.open(image_nc_dir)
+        mask_nc = Image.open(mask_nc_dir)
+        mask_nc = mask_nc.resize((width, height))
+        mask_nc = ImageOps.grayscale(mask_nc)
 
-plt.figure(figsize=(10, 10))
-plt.imshow(transforms.ToPILImage()(sample))
-plt.show()
-
-
-class AlbumentationsDataset(Dataset):
-    """__init__ and __len__ functions are the same as in TorchvisionDataset"""
-
-    def __init__(self, file_paths, labels, transform=None):
-        self.file_paths = file_paths
-        self.labels = labels
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.file_paths)
-
-    def __getitem__(self, idx):
-        label = self.labels[idx]
-        file_path = self.file_paths[idx]
-
-        # Read an image with OpenCV
-        image = cv2.imread(file_path)
-
-        # By default OpenCV uses BGR color space for color images,
-        # so we need to convert the image to RGB color space.
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        start_t = time.time()
-        if self.transform:
-            augmented = self.transform(image=image)
-            image = augmented['image']
-            total_time = (time.time() - start_t)
-        return image, label, total_time
-
-"""
-torchvision_transform = transforms.Compose([
-    transforms.Resize((256, 256)), 
-    transforms.RandomCrop(224),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-])
-"""
-
-# Same transform with torchvision_transform
-albumentations_transform = albumentations.Compose([
-    albumentations.Resize(256, 256),
-    albumentations.RandomCrop(150, 150), #default: 224
-    albumentations.HorizontalFlip(), # Same with transforms.RandomHorizontalFlip()
-    albumentations.pytorch.transforms.ToTensorV2()
-])
-
-# Same dataset with torchvision_dataset
-albumentations_dataset = AlbumentationsDataset(
-    file_paths=["D:/Different_backgrounds/Black/screw_random_dataset_6_2.png"],
-    labels=[1],
-    transform=albumentations_transform,
-)
-total_time = 0
-for i in range(100):
-  sample, _, transform_time = albumentations_dataset[0]
-  total_time += transform_time
-
-albumentations_transform_oneof = albumentations.Compose([
-    albumentations.Resize(256, 256),
-    albumentations.RandomCrop(100, 100), #default: 224
-    albumentations.OneOf([
-                          albumentations.HorizontalFlip(p=1),
-                          albumentations.RandomRotate90(p=1),
-                          albumentations.VerticalFlip(p=1)
-    ], p=1),
-    albumentations.OneOf([
-                          albumentations.MotionBlur(p=1),
-                          albumentations.OpticalDistortion(p=1),
-                          albumentations.GaussNoise(p=1)
-    ], p=1),
-    albumentations.pytorch.ToTensorV2()
-])
-
-albumentations_dataset = AlbumentationsDataset(
-    file_paths=["D:/Different_backgrounds/Black/screw_random_dataset_6_2.png"],
-    labels=[1],
-    transform=albumentations_transform_oneof,
-)
-
-num_samples = 5
-fig, ax = plt.subplots(1, num_samples, figsize=(25, 5))
-for i in range(num_samples):
-  ax[i].imshow(transforms.ToPILImage()(albumentations_dataset[0][0]))
-  img = transforms.ToPILImage()(albumentations_dataset[0][0])
-  imname = str(i) +'.png'
-  img.save(imname)
-
-  #image_name = 'image_' + str(i)
-  #ax[i].imsave(image_name, transforms.ToPILImage()(albumentations_dataset[0][0]))
-
-  ax[i].axis('off')
-
-print("albumentations time/sample: {} ms".format(total_time*10))
-
-#plt.figure(figsize=(10, 10))
-#plt.imshow(transforms.ToPILImage()(sample))
-plt.show()
+    # If double_augmenter is True, augmentation from all images and masks in folder initial_dataset. Else, only form
+    # images_1 and masks_1.
+    if double_augmenter:
+        augmentation(double_augmenter, image_name, image, pink, pix_pink, mask, black, pix_black, width, height, label,
+                     img_nc, pink_nc, pix_pink_nc, mask_nc, black_nc, pix_black_nc)
+    else:
+        augmentation(double_augmenter, image_name, image, pink, pix_pink, mask, black, pix_black, width, height, label)
